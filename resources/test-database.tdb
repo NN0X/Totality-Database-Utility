@@ -1,0 +1,105 @@
+<version:=0.1>		# assert TDB version to be 0.1
+# <version:0.1> 	# this asserts that version is above and including 0.1
+# <version:*>		# this indicates that version is not important
+# <version:0.*> 	# this asserts that major version has to be 0
+# <version:0.1.*> 	# this asserts that major and minor version is 0.1
+			# !IMPORTANT! not specifing the version causes fail
+
+<directory:(.)>		# database can contain files from current directory - this is assumed
+<directory:(signature)>	# database can contain files from "signature" directory contained in current directory
+			# () are used to specify that the string inside of them is a directory
+
+# (..) indicates parent directory of this file
+# (../..) indicates parent directory of parent directory and so on
+# (test/child) indicates direcory "child" inside of directory "test" but doesn't indicate directory "test"
+# (test//child) indicates both "child" and "test"
+# (*) indicates all directories contained in current directory
+# (**) indicates all directories contained in this directory and all directories below them recursively
+# if any files in indicated directories have same name and files are accessed without specifing directory fail is caused
+# <include:(dir1)file> 		# "include" file.tdb from dir1
+# <include:(dir1/child)file> 	# "include" file.tdb from child directory inside of dir1
+# <include:(.)file>		# "include" file.tdb from current directory
+# <include:file>		# this causes fail if there are multiple file.tdb in indicated directories
+
+# <require:signature>	# require existence of file "signature", if file doesn't exist it causes fail
+<require>					# all statements inside of "require" are evaluated to be true or false
+	<extern:signature>			# "extern" directive already requires the existence of specified file
+		<extern:key>=="test key";	# this statement loads variable key from signature and checks if it equals "test key"
+	</extern:signature>
+</require>		# "require" causes fail if any statement inside of it is false
+			# !IMPORTANT! "extern" inside of "require", causes fail if the variable cannot be loaded
+			# !IMPORTANT! this is not true for "extern" outside of "require"
+			# !IMPORTANT! all mentions of any directive requiring "something" is equal to using <require:something>
+
+<global>		# all "global" variables are accessible in the whole database unit without the need to "include"
+	string:name="default";
+</global>		# "global" directive should be used at the beginning of the file, only after "version", "directory" and "require"
+			# <global:name> is substituted during parsing to the value of global variable "name"
+			# !IMPORTANT! specifing two global variables with same name causes fail
+
+<include:test-templates>	# "include" test-templates.tdb
+				# !IMPORTANT! "include" requires the specified file
+				# !IMPORTANT! "include", in comparison to "extern", can cause naming conflicts, in turn causing fail
+
+<using:test-object-template>	# use template test-object-template
+				# !IMPORTANT! "using" requires the specified template
+test-object1:{
+	"object";
+	[0, 0];
+	[1, 1];
+	["", "test", "3"];
+}
+
+test-object2:{
+	"object";
+	[1, 2];
+	[];
+}
+</using:test-object-template>
+
+<extern:test-variables>						# extern loads variables from specified file without loading the whole file
+	u16:u16copy=<extern:u16>;				# if the extern variable doesn't exist it assumes default value
+	string:copy=<extern:string>|"default";			# default value can be specified
+	string:copy2=<extern:fake>|<extern:string>|"default";	# this will try to load extern variables in specified order
+</extern:test-variables>
+
+test-object3:{
+	string:name=copy;	# variables in file space can be assigned to other variables without using directives
+	u8:number=u16copy;
+	#u8:num=<global:num>;	# assign global variable "num" to "num"
+				# !IMPORTANT! <global:var> requires "var"
+}
+
+<extern:test-variables>
+	test-object4:{
+		string:name=<extern:string>;	#loads extern variable "string", otherwise "name" is set to default value, in this case ""
+		u16:num=<extern:u16>|2;		#loads extern "u16", otherwise "num" is set to 2, where global default is, in this case, 0
+	}
+</extern:test-variables>	#!IMPORTANT! each call to <extern:var> loads "var" separetly which is slow
+
+#!IMPORTANT! any attempt to change variable value after definition causes fail
+#!IMPORTANT! any TDB file can be accessed using <extern:(path)file> even if specified path and file is not in database unit
+#!IMPORTANT! <include:(path)file> also works, however because of "include" the file is practically added to database unit
+#!IMPORTANT! usage of <extern:(path)file> avoids possible naming conflicts of global variables
+#!IMPORTANT! because of naming conflicts avoidance it's possible to assign extern variable from outside of database unit as global inside of it
+	# <global>
+	#	<extern:(path)file>
+	#		'TYPE':'NAME':<extern:var>
+	#	</extern:(path)file>
+	# </global>
+	#
+#!IMPORTANT! objects and templates cannot be global and extern and can only be shared using "include"
+#!IMPORTANT! from the perspective of a database unit using "include" merges two files and "extern" files don't exist
+#!IMPORTANT! each TDB file can be the entry point of a separate database unit
+#!IMPORTANT! each database unit can be represented as one file
+#!IMPORTANT! from the perspective of the database each database unit is unique and separate, which means that there can be duplicate units
+#!IMPORTANT! each database unit can be saved as TDU (Totality Database Unit), which is a binary intermediate file, allowing the unloading 
+		# of units from RAM and loading them as needed
+#!IMPORTANT! while each database can be saved as a cluster of TDUs for speed improvements, TDU cannot be converted back to a TDB file
+		# without losing file specific information such as: all object and template names, all comments, all formatting and
+		# all directives. additionally while templates will be retained as separate entities, all objects relying on them are
+		# converted to basic objects for optimization and thus this information is also lost
+
+# when TDB files should not be read, for example when shipped with an application, the preffered way is to pack them into a 
+# TEA (Totality Encrypted Archive) file using TEA Utility, which would convert the TDB file to binary and optionally encrypt it, while
+# keeping all data otherwise lost during conversion to TDU. it's also preffered when working with TDUs, but doesn't prevent information loss

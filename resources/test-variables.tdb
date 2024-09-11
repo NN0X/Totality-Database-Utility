@@ -1,0 +1,26 @@
+<version:=0.1>
+
+bool:boolean1=true;
+bool:boolean2=0;
+
+char:character="a";
+
+i8:integer8=-5;
+u8:unsigned8=5;
+
+i16:i16=-1777;
+u16:u16=8687;
+
+i32:i32=-777777;
+u32:u32=978908;
+
+i64:i64=-7765690088;
+u64:u64=96901831;
+
+float:floating=0.77778;
+double:doubleing=0.100281820;
+
+string:string="string";
+
+u16[2]:array2=[1, 2];
+u16[?]:array?=[];

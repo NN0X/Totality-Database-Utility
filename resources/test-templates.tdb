@@ -1,0 +1,12 @@
+<version:=0.1>
+
+<template>
+test-object-template:{
+	string:name=<global:name>|"name";
+	u8:type=0;
+	string:label=?;
+	float[2]:position=?;
+	float[2]:scale=?;
+	string[?]:metadata=?;
+}
+</template>
